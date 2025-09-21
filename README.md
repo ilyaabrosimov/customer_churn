@@ -124,3 +124,18 @@ This project assumes a Telco-style churn dataset with a binary `Churn` column an
 If you use a different schema:
 - Rename/match the target, update yes/no mappings, and adjust the feature engineering list.
 
+---
+
+## Business recommendations
+- Segment customers by churn risk (e.g., p ≥ 0.7 / 0.4–0.7 / < 0.4).
+- Targeted retention offers for high-risk: discounts/bundles, switch to annual.
+- Proactive support outreach for high-risk.
+- Plan A/B tests based on top feature importances (pricing, contract type, tenure).
+
+---
+
+## Next steps
+- Establish baseline (churn, CAC/LTV, NPS).
+- Choose decision threshold by FP/FN costs.
+- Monthly drift monitoring & retraining; dashboard with uplift & model metrics.
+
