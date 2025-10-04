@@ -1,141 +1,102 @@
-# Customer Churn — EDA, Modeling, and Report
+# Capstone Project  
+**Customer Churn Prediction — Final Report**
 
-A reproducible capstone-style project that explores **customer churn** with thorough **EDA**, feature engineering, and baseline **ML models**.  
-Outputs include rich visualizations (KDE grids, heatmaps, stacked bars, Sankey, etc.), model comparison with class-imbalance strategies, and **Word report** for non-technical audiences.
-
----
-
-## 🔧 Quickstart
-
-**Python**: 3.9–3.12
-
-```bash
-python -m venv .venv
-source .venv/bin/activate        # .venv\Scripts\activate on Windows
-pip install -U pip
-pip install pandas numpy matplotlib seaborn scikit-learn imbalanced-learn \
-            statsmodels plotly python-docx jupyter
-jupyter lab
-```
-
-Place your CSV in `data/raw/` (or edit `DATA_PATH` in the notebook).  
-The project expects a target column named **`Churn`** (values like Yes/No).  
-If your file uses a different name, adjust the `TARGET` detection cell.
+- 📓 Notebook: `customer_churn_analysis.ipynb`  
+- 📁 Figures: `figures/` (все графики, упомянутые ниже)  
+- 📁 Reports: `reports/` (включая `model_results.csv`, `gridsearch_results.csv`)
 
 ---
 
-## 🎯 Objectives
-
-- Clean and understand the dataset (missing values, dtypes, duplicates, outliers).
-- Explore relationships between features and **churn** with compelling visuals.
-- Engineer simple, leakage-safe features (e.g., `tenure_bucket`, `services_count`).
-- Train **baseline classifiers** with **class imbalance** handling:
-  - Logistic Regression, Decision Tree, Random Forest, HistGradientBoosting, SVM
-  - Strategies: no handling, **class weights**, **RandomOverSampler**, **SMOTE**, **RandomUnderSampler**
-- Evaluate with **ROC AUC**, **Precision**, **Recall**, **F1**, plus ROC curves.
-- Export clean data, metrics, and a polished **Word summary**.
+## 1) Define the Problem Statement
+We aim to predict **customer churn** (whether a customer will leave the service in the near future) to focus retention actions on at-risk users.  
+**Goals:** reduce churn rate, prioritize outreach to high-risk customers, and improve ROI of retention campaigns.  
+**Challenges:** class imbalance (fewer churners), heterogeneous feature types (demographics, services, billing), and the need for interpretable insights for business teams.  
+**Business benefits:** early identification of at-risk customers enables targeted offers (contract upgrades, bundles, auto-pay incentives) and improves customer lifetime value (LTV).
 
 ---
 
-## 🧹 Data cleaning & feature engineering
-
-- Trim strings, cast numerics (e.g., `TotalCharges`), convert booleans/Yes–No.
-- Remove exact duplicates; simple imputation for EDA.
-- IQR capping for numeric outliers.
-- Features:
-  - `tenure_bucket` (<=6m, 7–12m, …)
-  - `services_count` (sum of yes/no service flags)
-  - Binary convenience flags (`PaperlessBilling_bin`, `Partner_bin`, `Dependents_bin`)
+## 2) Model Outcomes or Predictions
+- **Learning type:** supervised **binary classification**.  
+- **Model output:** probability of churn (`P(churn)` from 0 to 1) and a class label via a chosen threshold.  
+- **Usage:** rank customers by risk for retention campaigns; threshold can be tuned by business costs (FP/FN).
 
 ---
 
-## 📊 Visualizations (saved in `figures/`)
+## 3) Data Acquisition
+- **Primary source:** Kaggle “Customer Churn Dataset” (Telco-style), with target **`Churn`** (Yes/No) and features covering demographics, services, and billing.
+- **Data coverage:** ~7k customers, ~20+ columns (contract type, internet service, add-on services, charges, tenure, payment method, etc.).
+- **Sanity checks:** class balance inspection, feature completeness, and basic distribution checks.
+- **Visuals to assess fitness:**  
+  - Class balance bar plot (`figures/class_balance.png`)  
+  - Numeric distributions & boxplots by churn (`figures/num_distributions_*.png`)  
+  - Categorical churn rates (`figures/cat_churn_rate__*.png`)  
+  - Correlation heatmap for numeric variables (`figures/corr_heatmap.png`)
 
-- **Class balance** bar.
-- **Numeric**: histograms, **boxplots vs churn**, **KDE grids** (optionally overlay Churn/Not churn).
-- **Correlations**: numeric heatmap.
-- **Categorical vs churn**:
-  - 100% **stacked bars** (churn share by category)
-  - **Cat×Cat heatmaps** (churn rate by pair of categories)
-  - **Facet** churn-rate grids (bar within row panels)
-  - **Risk deviation** (dot/lollipop vs base churn)
-  - **Mosaic** plots (requires `statsmodels`)
-  - **Sankey** flows (requires `plotly`) for category → churn paths
-
-Tune speed/readability with constants like `MAX_LEVELS`, `MIN_COUNT`, `TOP_K`.
+> If additional internal data is available (support tickets, payment delays, NPS/CSAT), it can further improve the model in future iterations.
 
 ---
 
-## 🤖 Modeling & class imbalance
+## 4) Data Preprocessing / Preparation
+**a. Missing values & inconsistencies**
+- Trimmed strings and unified Yes/No values.
+- Casted numerics (e.g., `TotalCharges`) and handled missing values (simple imputation in EDA; pipeline imputation in modeling).
+- Removed duplicates; capped numeric outliers via IQR where relevant for EDA.
 
-**Preprocessing (ColumnTransformer)**
-- Numeric: median imputation + `StandardScaler`
-- Categorical: most-frequent imputation + `OneHotEncoder(handle_unknown="ignore")`
+**b. Train/test split**
+- Stratified split into **train/test** to preserve churn ratio (e.g., 80/20).  
+- Random seed fixed for reproducibility.
 
-**Models**
-- `LogisticRegression`, `DecisionTreeClassifier`, `RandomForestClassifier`,
-  `HistGradientBoostingClassifier`, `SVC(probability=True)`
-
-**Imbalance strategies**
-- none, **class_weight**, **oversample**, **SMOTE**, **undersample**
-
-Each (model × strategy) is evaluated; results are stored in:
-- `reports/model_results.csv`
-- `reports/metrics.json`
-
-A helper block **rebuilds the best pipeline**, plots the **confusion matrix**, and prints a **classification report**.
+**c. Encoding & pipelines**
+- **ColumnTransformer** with two branches:
+  - **Numeric:** median imputation → `StandardScaler`.
+  - **Categorical:** most-frequent imputation → `OneHotEncoder(handle_unknown="ignore")`.
+- Feature engineering (leakage-safe): e.g., `tenure_bucket`, `services_count`, binaries for convenience.
+- Class imbalance strategies compared in baseline loop: none, `class_weight="balanced"`, **SMOTE/oversampling**, **undersampling**.
 
 ---
 
-## ✅ What to expect in the results
-
-Typical (Telco-like) risk drivers surfaced by EDA:
-
-- **Contract**: **Month-to-month** churns much more than **Two year**.
-- **OnlineSecurity / TechSupport**: **No** → high churn; “No internet service” → low churn.
-- **InternetService**: **Fiber optic** users churn more (price/quality sensitive).
-- **PaymentMethod**: **Electronic check** churns more than **Credit card (automatic)**.
-- **PaperlessBilling**: **Yes** slightly increases churn vs **No** (co-varies with other factors).
-
-Use the provided **dot/lollipop** and **stacked bars** to communicate which categories are above/below base churn.
+## 5) Modeling
+We trained multiple classification models:
+- **Baseline sweep:** `LogisticRegression`, `DecisionTree`, `RandomForest`, `HistGradientBoosting`, `SVC(probability=True)`  
+  × imbalance strategies (none / class_weight / over/under-sampling / SMOTE).  
+- **Hyperparameter tuning:** **GridSearchCV** with **StratifiedKFold (n=5)** for  
+  `LogisticRegression`, `DecisionTree`, `RandomForest`, `GradientBoosting`, `HistGradientBoosting`, `SVC`, `KNN`  
+  (optionally XGBoost/LightGBM if installed).  
+- **Primary selection metric:** **ROC AUC** (robust under class imbalance). We also report **F1**, **Precision**, **Recall**, **Accuracy** on the test set.
 
 ---
 
-## 🔁 Reproducibility
+## 6) Model Evaluation
+- **Why ROC AUC:** ranks positive class well even with imbalance; independent of a single threshold.  
+- **Additional metrics:** F1, Precision, Recall, Accuracy at default threshold 0.5 for operational view.
 
-- Random seeds set to `42` in split/models where applicable.
-- All file paths are created automatically; change `PROJECT_ROOT`/`DATA_PATH` as needed.
+**Summary of tuned models (from GridSearchCV, test set):**
+- **Best model:** `GradientBoosting` — Test **ROC AUC ≈ 0.847**, **F1 ≈ 0.588**, **Accuracy ≈ 0.805**.  
+  **Best params:** `n_estimators=200`, `learning_rate=0.05`, `max_depth=2`, `subsample=0.8`.  
+- Full comparison table and bar charts are generated in the notebook and saved to:
+  - `reports/gridsearch_results.csv`
+  - `figures/model_compare__test_auc.png`, `figures/model_compare__test_f1.png`
 
----
+**Interpretation & business insights (from model importances/coefficients):**
+- `Contract = Month-to-month`, `InternetService = Fiber optic`, low `tenure`, high `MonthlyCharges`, and gaps in add-on services (`OnlineSecurity = No`, `TechSupport = No`) **increase** churn risk.  
+- `One/Two-year` contracts and longer `tenure` **reduce** churn risk.  
+- Actionable levers: promote longer-term contracts, bundle OnlineSecurity/TechSupport, and incentivize auto-pay instead of electronic check.
 
-## 📌 Mapping to rubric (what graders look for)
+> Next improvements: select decision threshold by **business cost** (FP/FN), calibrate probabilities (Platt/Isotonic), monitor drift monthly, expand features (support/NPS/payments), and A/B test retention offers on top-risk segments.
 
-- **Project organization** → created folder structure, clean notebook, saved artifacts.
-- **Syntax & code quality** → modular helpers, pipelines, comments, no long monoliths.
-- **Visualizations** → readable titles/labels, appropriate plots for data types, facetting.
-- **Data cleaning & EDA** → imputation, duplicates, outliers, feature engineering.
-- **Modeling** → appropriate classifier(s), clear metric choice & interpretation (ROC AUC, PR/F1), rationale for imbalance handling.
+## 🥇 Top Model (from GridSearchCV)
 
----
+> This section summarizes the best model by **Test ROC AUC** (tie-break by **Test F1**).  
+> It is auto-generated from `gridsearch_results.csv` in the notebook.
 
-## 📄 Dataset
+| Model | CV AUC | Test AUC | Test F1 | Precision | Recall | Accuracy |
+|:------|-------:|---------:|--------:|----------:|-------:|---------:|
+| GradientBoosting | 0.851 | 0.847 | 0.588 | 0.669 | 0.524 | 0.805 |
 
-This project assumes a Telco-style churn dataset with a binary `Churn` column and service/billing features.  
-If you use a different schema:
-- Rename/match the target, update yes/no mappings, and adjust the feature engineering list.
+**Best hyperparameters:**
 
----
-
-## Business recommendations
-- Segment customers by churn risk (e.g., p ≥ 0.7 / 0.4–0.7 / < 0.4).
-- Targeted retention offers for high-risk: discounts/bundles, switch to annual.
-- Proactive support outreach for high-risk.
-- Plan A/B tests based on top feature importances (pricing, contract type, tenure).
-
----
-
-## Next steps
-- Establish baseline (churn, CAC/LTV, NPS).
-- Choose decision threshold by FP/FN costs.
-- Monthly drift monitoring & retraining; dashboard with uplift & model metrics.
+  "clf__learning_rate": 0.05
+  "clf__max_depth": 2
+  "clf__n_estimators": 200
+  "clf__subsample": 0.8
 
